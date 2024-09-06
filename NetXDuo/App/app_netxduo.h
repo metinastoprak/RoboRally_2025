@@ -98,8 +98,9 @@ typedef enum _macAddress{
 
 
 
-#define DEFAULT_PORT             6001
-#define MAC_ADDRESS              MAC_ADDRESS_ID7   // 1.Board=61  2.Board=62-...8.Board=68
+#define DEFAULT_PORT            6001
+#define MAC_ADDRESS             MAC_ADDRESS_ID7   // 1.Board=61  2.Board=62-...8.Board=68
+#define STATION_ID              (MAC_ADDRESS%10)
 
 #define UDP_SERVER_PORT          DEFAULT_PORT
 #define UDP_SERVER_ADDRESS       IP_ADDRESS(192, 168, 1, 2)

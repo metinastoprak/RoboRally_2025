@@ -335,7 +335,7 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
   UCHAR data_buffer[512];
 
   NX_PACKET *data_packet;
-
+  CHAR message[30];
 /*
   CHAR message[20+2];
 
@@ -378,11 +378,16 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
     }
 
      //send connection active
-      ret = nx_packet_data_append(data_packet, (VOID *)DEFAULT_MESSAGE, sizeof(DEFAULT_MESSAGE), &NxAppPool, TX_WAIT_FOREVER);
-      if (ret != NX_SUCCESS)
-      {
-        Error_Handler();
-      }
+    TX_MEMSET(message, '\0', sizeof(message));
+    snprintf(message, sizeof(message), "id:%01d connection active", STATION_ID);
+    
+
+    ret = nx_packet_data_append(data_packet, (VOID *)message, strlen(message), &NxAppPool, TX_WAIT_FOREVER);
+    //ret = nx_packet_data_append(data_packet, (VOID *)DEFAULT_MESSAGE, sizeof(DEFAULT_MESSAGE), &NxAppPool, TX_WAIT_FOREVER);
+    if (ret != NX_SUCCESS)
+    {
+      Error_Handler();
+    }
 
       /* send the message */
       ret = nx_udp_socket_send(&UDPSocket, data_packet, UDP_SERVER_ADDRESS, UDP_SERVER_PORT);
@@ -390,7 +395,6 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
       /* MSG Listening .. wait 10 sec to receive response from the server */
       ret = nx_udp_socket_receive(&UDPSocket, &server_packet, NX_APP_DEFAULT_TIMEOUT);
 
-      ret = NX_NO_PACKET;
     if (ret == NX_SUCCESS)
     {
       ULONG source_ip_address;
@@ -402,7 +406,7 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
       /* retrieve the data sent by the server */
       nx_packet_data_retrieve(server_packet, data_buffer, &bytes_read);
 
-      printf("[UDP-Receive]-> %s\n", data_buffer);
+      printf("[ID%01d-UDP Receive]-> %s\r\n", STATION_ID,data_buffer);
 
 #if 0   
 	 // get "id:"  "cmd:" "stat:" sub msg
@@ -445,7 +449,7 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
       //break;
     }
 
-  	printf("\rUDP_Thread_Exit\n");
+  	//printf("\rUDP_Thread_Exit\n");
 
     /* Add a short timeout to let the echool tool correctly
     process the just sent packet before sending a new one */
@@ -470,14 +474,13 @@ VOID App_UDP_Thread_SendMESSAGE(const char *msg,unsigned char timestamp)
   TX_MEMSET(message, '\0', sizeof(message));
 
   if (strcmp(msg,START_MESSAGE) == 0) {
-    snprintf(message, sizeof(message), "id:%01d start.%01d", MAC_ADDRESS%10, timestamp); 
+    snprintf(message, sizeof(message), "id:%01d start.%01d", STATION_ID, timestamp); 
   }
   else {
-    snprintf(message, sizeof(message), "id:%01d finish.%01d", MAC_ADDRESS%10, timestamp); 
+    snprintf(message, sizeof(message), "id:%01d finish.%01d", STATION_ID, timestamp); 
   }
-
-  // Message will be sent via UDP
-  printf("[UDP-Send] -> %s\n", message);
+    // Message will be sent via UDP
+  printf("[ID%01d-UDP Send] -> %s\r\n",STATION_ID,message);
 
   //send message to portal
   ret = nx_packet_allocate(&NxAppPool, &data_packet, NX_UDP_PACKET, TX_WAIT_FOREVER);
@@ -486,7 +489,7 @@ VOID App_UDP_Thread_SendMESSAGE(const char *msg,unsigned char timestamp)
     Error_Handler();
   }
 
-  ret = nx_packet_data_append(data_packet, (VOID *)message, sizeof(message), &NxAppPool, TX_WAIT_FOREVER);
+  ret = nx_packet_data_append(data_packet, (VOID *)message, strlen(message), &NxAppPool, TX_WAIT_FOREVER);
   if (ret != NX_SUCCESS)
   {
     Error_Handler();
@@ -496,7 +499,7 @@ VOID App_UDP_Thread_SendMESSAGE(const char *msg,unsigned char timestamp)
   ret = nx_udp_socket_send(&UDPSocket, data_packet, UDP_SERVER_ADDRESS, UDP_SERVER_PORT);
 
   snprintf(logmsg, sizeof(message),message);
-//SENDLOG();
+  SENDLOG();
 
 //printf("\r[Portal] nx_udp_socket_send ret:%d\n",ret);
   nx_packet_release(data_packet);
@@ -583,7 +586,7 @@ void App_UDP_Thread_Send_LOG(void)
     }
 
     //ret = nx_packet_data_append(data_packet, (VOID *)"44,11,22,33", sizeof("44,11,22,33"), &NxAppPool, TX_WAIT_FOREVER);
-    ret = nx_packet_data_append(data_packet, (VOID *)message, sizeof(message), &NxAppPool, TX_WAIT_FOREVER);
+    ret = nx_packet_data_append(data_packet, (VOID *)message, strlen(message), &NxAppPool, TX_WAIT_FOREVER);
 
     if (ret != NX_SUCCESS)
     {

@@ -73,6 +73,15 @@ void app_buttonLed(void) {
             }
         }
     }
+
+    if (tx_semaphore_get(&semaphore_buttonpress, TX_NO_WAIT) == TX_SUCCESS)
+    {
+#if STATION_MODE == START_STATION    
+        Station_SensorAck_Update(0x0F00);
+#elif STATION_MODE == FINISH_STATION
+        Station_SensorAck_Update(0x000F);
+#endif
+    }
 }
 
 /**

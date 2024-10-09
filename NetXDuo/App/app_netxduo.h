@@ -99,7 +99,7 @@ typedef enum _macAddress{
 
 
 #define DEFAULT_PORT            6001
-#define MAC_ADDRESS             MAC_ADDRESS_ID7   // 1.Board=61  2.Board=62-...8.Board=68
+#define MAC_ADDRESS             MAC_ADDRESS_ID1   // 1.Board=61  2.Board=62-...8.Board=68
 #define STATION_ID              (MAC_ADDRESS%10)
 
 #define UDP_SERVER_PORT          DEFAULT_PORT
@@ -133,7 +133,7 @@ typedef enum _macAddress{
 #define NX_APP_DEFAULT_NET_MASK                     0
 
 /* USER CODE BEGIN 1 */
-extern VOID App_UDP_Thread_SendMESSAGE(const char *,unsigned char);
+extern VOID App_UDP_Thread_SendMESSAGE(const char *,unsigned char,unsigned char);
 extern VOID App_UDP_Thread_Send_LOG(void);
 
 #define SENDLOG() App_UDP_Thread_Send_LOG()

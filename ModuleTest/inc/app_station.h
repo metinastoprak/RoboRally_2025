@@ -60,6 +60,26 @@ typedef enum _msgState{
     MSG_STATE_PROCESS,
 }msgState;
 
+typedef enum _sensorType{
+    SENSOR_PHOTOCELL_1,
+    SENSOR_PHOTOCELL_2,
+    SENSOR_PHOTOCELL_3,
+    SENSOR_PHOTOCELL_4,
+    SENSOR_COUNT_MAX,
+}t_sensorType;
+
+typedef struct _Sensor {
+    uint8_t isPinIDLE;
+    uint8_t isDetected;
+    uint8_t isMsgAck;
+
+
+    uint8_t bounce;
+    uint8_t sendCount;
+    unsigned long timestamp;
+
+}t_Sensor;
+
 /*******************************************************************************
 * EXPORTED VARS
 ********************************************************************************/
@@ -73,6 +93,10 @@ INTERFACE TX_SEMAPHORE semaphore_photocell;
 
 INTERFACE char logmsg[50];
 
+INTERFACE t_Sensor PhotocellSensor[SENSOR_COUNT_MAX];
+
+INTERFACE const GPIO_TypeDef * Photocell_GPIOs[SENSOR_COUNT_MAX];
+INTERFACE const uint16_t Photocell_PINs[SENSOR_COUNT_MAX];
 
 /*******************************************************************************
 * EXPORTED FUNCTIONS
@@ -81,6 +105,7 @@ INTERFACE VOID Station_thread_entry(ULONG initial_param);
 INTERFACE VOID LED1_thread_entry(ULONG initial_param);
 INTERFACE VOID LED2_thread_entry(ULONG initial_param);
 
+INTERFACE VOID Station_SensorAck_Update(UINT ackmessage);
 
 
 #undef	INTERFACE

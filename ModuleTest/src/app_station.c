@@ -48,6 +48,10 @@ const char * Generic_State[6] =    {"IDLE", \
                                     "DONE"};
 
 
+t_Sensor PhotocellSensor[SENSOR_COUNT_MAX];
+
+const GPIO_TypeDef * Photocell_GPIOs[SENSOR_COUNT_MAX]={Photocell_1_GPIO_Port,Photocell_2_GPIO_Port,Photocell_3_GPIO_Port,Photocell_4_GPIO_Port}; 
+const uint16_t Photocell_PINs[SENSOR_COUNT_MAX]={Photocell_1_Pin,Photocell_2_Pin,Photocell_3_Pin,Photocell_4_Pin};
 
 /*******************************************************************************
 * LOCAL VARIABLES
@@ -74,6 +78,15 @@ VOID Station_thread_entry(ULONG initial_param){
     
 
     printf("[Thread-Station] Entry\n\r");
+    // initialize Sensors
+    for (uint8_t i=0;i<SENSOR_COUNT_MAX;i++){
+        PhotocellSensor[i].isPinIDLE = 0;
+        PhotocellSensor[i].isDetected = 0;
+        PhotocellSensor[i].isMsgAck = 0;
+        PhotocellSensor[i].bounce = 0;
+        PhotocellSensor[i].sendCount = 0;
+    }
+    
     isPhotocellDetect = 0;isPhotocellIDLE = 0;
 
     while (1)
@@ -105,12 +118,50 @@ VOID Station_thread_entry(ULONG initial_param){
 
     
 }
+ /**
+  * @brief  "s" or "f" status checking 
+  * @param  ack message received from portal
+  * 16bit status --> if ackmsg= 0xFFFF then clear IDLE flags to default case for each station
+  *              --> 0000ssss 0000ffff checking
+  * @retval None
+  */
+VOID Station_SensorAck_Update(UINT ackmsg){
+    
+    UCHAR bitALL = 0;
+    if (ackmsg == 0xFFFF){
+        // all messages x x x x x x x x
+        bitALL = 1;
+    }
+    else {
+#if STATION_MODE == START_STATION    
+    ackmsg>>= 8;
+#elif STATION_MODE == FINISH_STATION
+    ackmsg &= 0x00FF;
+#endif
+    }
+
+    for (UINT i = 0; i < SENSOR_COUNT_MAX; i++) {
+        
+        if (bitALL ) {
+            // default state
+            if (PhotocellSensor[i].sendCount == 0) {
+                PhotocellSensor[i].isDetected = 0;
+                PhotocellSensor[i].isPinIDLE = 0;
+            }
+        }
+        else if (ackmsg & (1 << (3 - i))) 
+        {
+            PhotocellSensor[i].sendCount = 0;
+            PhotocellSensor[i].isDetected = 0;        
+        }
+    }
+} 
 /**
 * @brief Function Name Station_SensorHandler()
 * handle Photocell sensor signal & transmit message to PORTAL side
 */
 static void Station_SensorHandler(void) {
-
+#if 0
     static unsigned char bounceCNT = 0;
     static ULONG start_time;
     static unsigned char tick = 0;
@@ -155,6 +206,52 @@ static void Station_SensorHandler(void) {
 #endif
         --tick;
     }
+#endif
+    // check Sensors state
+    for (uint8_t i=0;i<SENSOR_COUNT_MAX;i++){
+        if (PhotocellSensor[i].isDetected && !PhotocellSensor[i].isPinIDLE && (PhotocellSensor[i].sendCount == 0)) {
+
+            printf("\r\n[Station] Photocell-%d detected\r\n",i+1);
+            PhotocellSensor[i].isPinIDLE = 1;
+            PhotocellSensor[i].bounce = 0;
+            PhotocellSensor[i].timestamp = tx_time_get();
+            PhotocellSensor[i].sendCount = 4;
+
+#if STATION_MODE == START_STATION    
+            App_UDP_Thread_SendMESSAGE(START_MESSAGE,1,i);
+#elif STATION_MODE == FINISH_STATION
+            App_UDP_Thread_SendMESSAGE(FINISH_MESSAGE,1,i+4);
+#endif
+
+        }
+        else if (PhotocellSensor[i].isPinIDLE){
+            // photocell detected, check "bounce" falling edge signal  of PIN level
+            if (HAL_GPIO_ReadPin(Photocell_1_GPIO_Port,Photocell_1_Pin) == 1){
+                if (++PhotocellSensor[i].bounce >= 3){
+                    PhotocellSensor[i].isPinIDLE = 0;PhotocellSensor[i].isDetected = 0;
+                }
+            }
+            else
+                PhotocellSensor[i].bounce = 0;
+        }
+
+        // resend message 5times  within 1sec time interval
+        if ((PhotocellSensor[i].sendCount > 0) && (tx_time_get() - PhotocellSensor[i].timestamp) >= 100) {
+            PhotocellSensor[i].timestamp = tx_time_get();
+ 
+        // Send Msg to Portal ----> msgType-sendCount-StationID(photocellSensorIndex)
+#if STATION_MODE == START_STATION    
+            App_UDP_Thread_SendMESSAGE(START_MESSAGE,6-PhotocellSensor[i].sendCount,i);     
+#elif STATION_MODE == FINISH_STATION
+            App_UDP_Thread_SendMESSAGE(FINISH_MESSAGE,6-PhotocellSensor[i].sendCount,i+4);
+#endif
+            if (--PhotocellSensor[i].sendCount == 0){
+               PhotocellSensor[i].isDetected = 0;PhotocellSensor[i].isPinIDLE = 0;     
+            }
+        }
+
+    }
+
 }
 
 /**

@@ -45,8 +45,6 @@
 void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
 {
   ULONG currentValue = 0;
-  UCHAR bPinState = 0;
-  UINT counter = 0;
 
   if (GPIO_Pin == USER_BUTTON_Pin)
   {
@@ -60,29 +58,41 @@ void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
     }
     tx_semaphore_put(&semaphore_buttonpress);
   }
-  else if (GPIO_Pin == Photocell_Pin && !isPhotocellIDLE)
-  {
- 
- 		do {
-			if (bPinState == HAL_GPIO_ReadPin(Photocell_GPIO_Port,Photocell_Pin))
-			{
-			  ++counter;
-			}
-			else
-			{
-				bPinState = HAL_GPIO_ReadPin(Photocell_GPIO_Port,Photocell_Pin);
-				counter = 0;
-			}
-		}while(counter < 1000);
-    if (bPinState){
-      isPhotocellDetect = 1;
-      //tx_semaphore_put(&semaphore_photocell);
-    }
-    else
-      isPhotocellDetect = 0;
-      
-  }
 
+}
+/**
+  * @brief EXTI line detection callbacks
+  *  GPIO_Pin: Specifies the pins connected EXTI line
+  * @retval None
+  */
+void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin)
+{
+  UCHAR bPinState = 0;
+  UINT counter = 0;
+
+  for (UCHAR i=0;i<SENSOR_COUNT_MAX;i++){
+
+    if (Photocell_PINs[i] == GPIO_Pin && !PhotocellSensor[i].isPinIDLE) {
+        // sensor num found, set flag & vars
+      do {
+        if (bPinState == HAL_GPIO_ReadPin(Photocell_GPIOs[i],Photocell_PINs[i]))
+        {
+          ++counter;
+        }
+        else
+        {
+          bPinState = HAL_GPIO_ReadPin(Photocell_GPIOs[i],Photocell_PINs[i]);
+          counter = 0;
+        }
+      }while(counter < 100);
+      if (!bPinState){
+        PhotocellSensor[i].isDetected = 1;
+        //tx_semaphore_put(&semaphore_photocell);
+      }
+      else
+        PhotocellSensor[i].isDetected = 0;
+    }
+  }
 }
 
 

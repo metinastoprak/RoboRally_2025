@@ -336,15 +336,6 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
 
   NX_PACKET *data_packet;
   CHAR message[30];
-/*
-  CHAR message[20+2];
-
-   CHAR *id_pos;
-	 CHAR *cmd_pos;
-	 CHAR *stat_pos;
-	 UINT status;
-	 unsigned char id, cmd, stat;
-*/
 
   /* create the UDP socket */
   ret = nx_udp_socket_create(&NetXDuoEthIpInstance, &UDPSocket, "UDP Client Socket", NX_IP_NORMAL, NX_FRAGMENT_OKAY, NX_IP_TIME_TO_LIVE, QUEUE_MAX_SIZE);
@@ -406,7 +397,40 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
       /* retrieve the data sent by the server */
       nx_packet_data_retrieve(server_packet, data_buffer, &bytes_read);
 
-      printf("[ID%01d-UDP Receive]-> %s\r\n", STATION_ID,data_buffer);
+      printf("[ST%01d-UDP Receive]-> %s\r\n", STATION_ID,data_buffer);
+
+      // check received message characters
+      // message format ex: "id1:s id2:s id3:x id4:x id5:f id6:x id7:x id8:x"
+      // if all chars = "x" then msgpattern= 0xFFFF --> station enters default mode
+      // pattern: "0b0000-ssss-0000-ffff"
+
+      UINT pattern = 0x0000;
+      UCHAR status = 1;                     // resume that all "x"
+      for (UINT i = 0; i < SENSOR_COUNT_MAX<<1; i++) {
+          UINT index = 4 + i * 6;           // check "idX:s/f/x" 
+
+          if (message[index] == 's') {
+              pattern |= (1 << (11 - i));   // "s" --> set bit  "11-8
+              status = 0;                    
+          } else if (message[index] == 'f') {
+              pattern |= (1 << (3 - i));    // "f" --> set bit "3-0" 
+              status = 0;  
+          } else if (message[index] != 'x') {
+            status = 2;pattern = 0x0000;
+            printf("[ST%01d-UDP Receive]-> error msg\r\n", STATION_ID);
+            break;                // error case captured
+          }
+      }
+
+      if (status == 1) {
+          pattern = 0xFFFF;  // Eğer hepsi 'x' ise sonuç 0xFFFF olacak
+      }
+      if (pattern != 0) {
+          // valid pattern received
+          printf("[ST%01d-UDP Receive]-> pattern:0x%04X%d\r\n", STATION_ID,pattern);
+          Station_SensorAck_Update(pattern);        //send pattern
+      }
+
 
 #if 0   
 	 // get "id:"  "cmd:" "stat:" sub msg
@@ -461,7 +485,7 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
 
 }
 /* Send Transcevir Msg to Portal via UDP port */
-VOID App_UDP_Thread_SendMESSAGE(const char *msg,unsigned char timestamp)
+VOID App_UDP_Thread_SendMESSAGE(const char *msg,unsigned char timestamp,unsigned char sensorNum)
 {
   UINT ret;
   NX_PACKET *data_packet;
@@ -474,13 +498,13 @@ VOID App_UDP_Thread_SendMESSAGE(const char *msg,unsigned char timestamp)
   TX_MEMSET(message, '\0', sizeof(message));
 
   if (strcmp(msg,START_MESSAGE) == 0) {
-    snprintf(message, sizeof(message), "id:%01d start.%01d", STATION_ID, timestamp); 
+    snprintf(message, sizeof(message), "id:%01d start.%01d", sensorNum+1, timestamp); 
   }
   else {
-    snprintf(message, sizeof(message), "id:%01d finish.%01d", STATION_ID, timestamp); 
+    snprintf(message, sizeof(message), "id:%01d finish.%01d", sensorNum+1, timestamp); 
   }
     // Message will be sent via UDP
-  printf("[ID%01d-UDP Send] -> %s\r\n",STATION_ID,message);
+  printf("[ST%01d-UDP Send] -> %s\r\n",STATION_ID,message);
 
   //send message to portal
   ret = nx_packet_allocate(&NxAppPool, &data_packet, NX_UDP_PACKET, TX_WAIT_FOREVER);

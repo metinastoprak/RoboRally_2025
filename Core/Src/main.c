@@ -269,7 +269,7 @@ static void MX_ETH_Init(void)
   MACAddr[2] = 0xE1;
   MACAddr[3] = 0x00;
   MACAddr[4] = 0x00;
-  MACAddr[5] = MAC_ADDRESS; //0x41;
+  MACAddr[5] = 0x00;
   heth.Init.MACAddr = &MACAddr[0];
   heth.Init.MediaInterface = HAL_ETH_RMII_MODE;
   heth.Init.TxDesc = DMATxDscrTab;
@@ -766,6 +766,12 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(USER_LED1_GPIO_Port, USER_LED1_Pin, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin : Photocell_1_Pin */
+  GPIO_InitStruct.Pin = Photocell_1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(Photocell_1_GPIO_Port, &GPIO_InitStruct);
+
   /*Configure GPIO pins : USER_LED2_Pin TRIG1_Pin */
   GPIO_InitStruct.Pin = USER_LED2_Pin|TRIG1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -786,11 +792,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(SA0_LSM6D_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : Photocell_Pin */
-  GPIO_InitStruct.Pin = Photocell_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  HAL_GPIO_Init(Photocell_GPIO_Port, &GPIO_InitStruct);
+  /*Configure GPIO pins : Photocell_3_Pin Photocell_4_Pin */
+  GPIO_InitStruct.Pin = Photocell_3_Pin|Photocell_4_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
   /*Configure GPIO pin : USER_LED1_Pin */
   GPIO_InitStruct.Pin = USER_LED1_Pin;
@@ -798,6 +804,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(USER_LED1_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : Photocell_2_Pin */
+  GPIO_InitStruct.Pin = Photocell_2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(Photocell_2_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : USER_BUTTON_Pin */
   GPIO_InitStruct.Pin = USER_BUTTON_Pin;
@@ -811,6 +823,15 @@ static void MX_GPIO_Init(void)
 
   HAL_NVIC_SetPriority(EXTI2_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI2_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI5_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI13_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI13_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI15_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_IRQn);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */

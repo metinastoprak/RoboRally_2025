@@ -335,7 +335,7 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
   UCHAR data_buffer[512];
 
   NX_PACKET *data_packet;
-  CHAR message[30];
+  CHAR message[50];
 
   /* create the UDP socket */
   ret = nx_udp_socket_create(&NetXDuoEthIpInstance, &UDPSocket, "UDP Client Socket", NX_IP_NORMAL, NX_FRAGMENT_OKAY, NX_IP_TIME_TO_LIVE, QUEUE_MAX_SIZE);
@@ -413,11 +413,11 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
               pattern |= (1 << (11 - i));   // "s" --> set bit  "11-8
               status = 0;                    
           } else if (message[index] == 'f') {
-              pattern |= (1 << (3 - i));    // "f" --> set bit "3-0" 
+              pattern |= (1 << (7 - i));    // "f" --> set bit "3-0" 
               status = 0;  
           } else if (message[index] != 'x') {
             status = 2;pattern = 0x0000;
-            printf("[ST%01d-UDP Receive]-> error msg\r\n", STATION_ID);
+            printf("[ST%01d-UDP Receive]-> msg error at %d. character '%c'\r\n", STATION_ID,index,message[index]);
             break;                // error case captured
           }
       }
@@ -427,7 +427,7 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
       }
       if (pattern != 0) {
           // valid pattern received
-          printf("[ST%01d-UDP Receive]-> pattern:0x%04X%d\r\n", STATION_ID,pattern);
+          printf("[ST%01d-UDP Receive]-> pattern:0x%04X\r\n", STATION_ID,pattern);
           Station_SensorAck_Update(pattern);        //send pattern
       }
 

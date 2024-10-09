@@ -74,14 +74,41 @@ void app_buttonLed(void) {
         }
     }
 
+#if 0
     if (tx_semaphore_get(&semaphore_buttonpress, TX_NO_WAIT) == TX_SUCCESS)
     {
-#if STATION_MODE == START_STATION    
-        Station_SensorAck_Update(0x0F00);
-#elif STATION_MODE == FINISH_STATION
-        Station_SensorAck_Update(0x000F);
-#endif
+
+      CHAR message[50] = "id1:s id2:s id3:x id4:s id5:f id6:x id7:G id8:f";
+      UINT pattern = 0x0000;
+      UCHAR status = 1;                     // resume that all "x"
+      
+      for (UINT i = 0; i < SENSOR_COUNT_MAX<<1; i++) {
+          UINT index = 4 + i * 6;           // check "idX:s/f/x" 
+
+          if (message[index] == 's') {
+              pattern |= (1 << (11 - i));   // "s" --> set bit  "11-8
+              status = 0;                    
+          } else if (message[index] == 'f') {
+              pattern |= (1 << (7 - i));    // "f" --> set bit "3-0" (4-3 5-2 6-1 7-0)
+              status = 0;  
+          } else if (message[index] != 'x') {
+            status = 2;pattern = 0x0000;
+            printf("[ST%01d-UDP Receive]-> msg error at %d. character '%c'\r\n", 1,index,message[index]);
+            break;                // error case captured
+          }
+      }
+
+      if (status == 1) {
+          pattern = 0xFFFF;  // Eğer hepsi 'x' ise sonuç 0xFFFF olacak
+      }
+      if (pattern != 0) {
+          // valid pattern received
+          printf("[ST%01d-UDP Receive]-> pattern:0x%04X\r\n", 1,pattern);
+          Station_SensorAck_Update(pattern);        //send pattern
+      }
+
     }
+#endif    
 }
 
 /**

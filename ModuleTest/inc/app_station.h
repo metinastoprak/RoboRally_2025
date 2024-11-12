@@ -38,6 +38,8 @@
 #define START_MESSAGE               "start"
 #define FINISH_MESSAGE              "finish"
 
+#define REPS_TXMESSAGE              10        
+
 /*
 #define QUEUE_STACK_SIZE        32*4
 #define TRANSCEIVER_PRIORITY    8
@@ -54,11 +56,12 @@ typedef enum _testState{
     TEST_STATE_DONE
 }t_testState;
 
-typedef enum _msgState{
-    MSG_STATE_IDLE,
-    MSG_STATE_READY,
-    MSG_STATE_PROCESS,
-}msgState;
+typedef enum _raceState{
+    RACE_STATE_IDLE,
+    RACE_STATE_READY,
+    RACE_STATE_START,
+    RACE_STATE_FINISH,
+}t_raceState;
 
 typedef enum _sensorType{
     SENSOR_PHOTOCELL_1,
@@ -93,8 +96,8 @@ INTERFACE TX_SEMAPHORE semaphore_photocell;
 
 INTERFACE char logmsg[50];
 
-INTERFACE t_Sensor PhotocellSensor[SENSOR_COUNT_MAX];
-
+INTERFACE volatile t_Sensor PhotocellSensor[SENSOR_COUNT_MAX];
+INTERFACE t_raceState raceState;
 INTERFACE const GPIO_TypeDef * Photocell_GPIOs[SENSOR_COUNT_MAX];
 INTERFACE const uint16_t Photocell_PINs[SENSOR_COUNT_MAX];
 

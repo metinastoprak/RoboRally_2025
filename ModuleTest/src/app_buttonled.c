@@ -47,8 +47,22 @@ void app_buttonLed(void) {
     ULONG currentValue = 0;
     UINT state;
     char * name;
+    static char bounceButton = 0;
 
-    if (tx_semaphore_get(&semaphore_ledblink, TX_NO_WAIT) == TX_SUCCESS)
+    if (raceState != RACE_STATE_IDLE && HAL_GPIO_ReadPin(USER_BUTTON_GPIO_Port,USER_BUTTON_Pin)) {
+        if (++bounceButton >= 50) {
+            printf("[BUTTON LONG] pressed, RaceState-->IDLE\r\n");
+            raceState = RACE_STATE_IDLE;
+            bounceButton = 0;  
+            tx_semaphore_get(&semaphore_buttonpress, TX_NO_WAIT);      
+        }
+    }
+    else {
+        bounceButton = 0;
+    }
+
+
+    if (0)  //(tx_semaphore_get(&semaphore_ledblink, TX_NO_WAIT) == TX_SUCCESS)
     {
         name = "LED1 Thread";
         tx_semaphore_info_get(&semaphore_ledblink, NULL, &currentValue, NULL, NULL, NULL);
@@ -122,8 +136,28 @@ VOID LED1_thread_entry(ULONG initial_param){
     printf("[Thread-LED1] Entry\r\n");    
     while (1)
     {
-        tx_thread_sleep(100);        //100ms sleep
-        HAL_GPIO_TogglePin(USER_LED1_GPIO_Port,USER_LED1_Pin);
+        switch(raceState)
+        {
+            case RACE_STATE_IDLE:
+            {
+                tx_thread_sleep(100);        
+                HAL_GPIO_TogglePin(USER_LED1_GPIO_Port,USER_LED1_Pin);
+                break;
+            }
+            case RACE_STATE_READY:
+            {
+                tx_thread_sleep(50);        
+                HAL_GPIO_TogglePin(USER_LED1_GPIO_Port,USER_LED1_Pin);
+                break;
+            }
+            case RACE_STATE_START:
+            {
+                tx_thread_sleep(20);        
+                HAL_GPIO_TogglePin(USER_LED1_GPIO_Port,USER_LED1_Pin);
+                break;
+            }
+
+        }
     }
 }
 /**

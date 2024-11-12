@@ -84,7 +84,7 @@ void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin)
           bPinState = HAL_GPIO_ReadPin(Photocell_GPIOs[i],Photocell_PINs[i]);
           counter = 0;
         }
-      }while(counter < 100);
+      }while(counter < 1000);
       if (!bPinState){
         PhotocellSensor[i].isDetected = 1;
         //tx_semaphore_put(&semaphore_photocell);

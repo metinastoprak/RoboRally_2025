@@ -9,7 +9,7 @@
 
 #include "main.h"
 #include "app_station.h"
-
+#include "app_netxduo.h"
 
 //#include "app_netxduo.h"
 
@@ -95,7 +95,7 @@ VOID Station_thread_entry(ULONG initial_param){
                 // turn off LEDs YELLOW-GREEN-REDs
                 HAL_GPIO_WritePin(YELLOW_LEDS_GPIO_Port,YELLOW_LEDS_Pin,GPIO_PIN_RESET);
                 for(uint8_t i=0;i<SENSOR_COUNT_MAX;i++)
-                    HAL_GPIO_WritePin(LED_GPIOs[i],LED_PINs[i],GPIO_PIN_RESET);
+                    HAL_GPIO_WritePin((GPIO_TypeDef *)LED_GPIOs[i],LED_PINs[i],GPIO_PIN_RESET);
                 
 #if STATION_MODE == START_STATION    
                 if (tx_semaphore_get(&semaphore_buttonpress, TX_NO_WAIT) == TX_SUCCESS) {
@@ -106,10 +106,15 @@ VOID Station_thread_entry(ULONG initial_param){
                     // Turn On YELLOW LED bars, check Sensor States
                     HAL_GPIO_WritePin(YELLOW_LEDS_GPIO_Port,YELLOW_LEDS_Pin,GPIO_PIN_SET);
 
+                    snprintf(logmsg, sizeof(logmsg), "[ST%01d-Station] button pressed->READY",STATION_ID);
+                    SENDLOG();
                     raceState = RACE_STATE_READY;
                  }
 #elif STATION_MODE == FINISH_STATION
-                printf("RaceState-->START\r\n"); 
+                printf("RaceState-->START\r\n");
+
+                snprintf(logmsg, sizeof(logmsg), "[ST%01d-Station] RaceStat->START",STATION_ID);
+                SENDLOG();
                 raceState = RACE_STATE_START;
 #endif
 
@@ -154,6 +159,10 @@ VOID Station_SensorAck_Update(UINT ackmsg){
         if (raceState == RACE_STATE_START && !Station_IsAnySensorTriggered()) {
             printf("[PORTAL] , RaceState-->IDLE\r\n"); 
             raceState = RACE_STATE_IDLE;
+            
+            // LOG
+            snprintf(logmsg, sizeof(logmsg), "[Portal-->ST%01d] new round->IDLE",STATION_ID);
+            SENDLOG();
         }
 
     }
@@ -198,7 +207,7 @@ static void Station_SensorHandler(void) {
             PhotocellSensor[i].sendCount = REPS_TXMESSAGE;
 
             // Turn On LED of Line
-            HAL_GPIO_WritePin(LED_GPIOs[i],LED_PINs[i],GPIO_PIN_SET);
+            HAL_GPIO_WritePin((GPIO_TypeDef *)LED_GPIOs[i],LED_PINs[i],GPIO_PIN_SET);
 
 #if STATION_MODE == START_STATION 
             App_UDP_Thread_SendMESSAGE(START_MESSAGE,1,i);

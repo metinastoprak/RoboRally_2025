@@ -106,7 +106,7 @@ typedef enum _macAddress{
 #define UDP_SERVER_ADDRESS       IP_ADDRESS(192, 168, 1, 2)
 
 #define PRINTF_PORT              6000
-#define PRINTF_SERVER_ADDRESS    IP_ADDRESS(192, 168, 1, 3)
+#define PRINTF_SERVER_ADDRESS    IP_ADDRESS(192, 168, 1, 2)
 
 #define MAX_PACKET_COUNT         4
 #define DEFAULT_MESSAGE          "connection active"

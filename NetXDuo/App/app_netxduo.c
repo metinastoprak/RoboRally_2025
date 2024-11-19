@@ -371,13 +371,12 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
      //send connection active
     TX_MEMSET(message, '\0', sizeof(message));
     snprintf(message, sizeof(message), "id:%01d connection active", STATION_ID);
-    
 
     ret = nx_packet_data_append(data_packet, (VOID *)message, strlen(message), &NxAppPool, TX_WAIT_FOREVER);
     //ret = nx_packet_data_append(data_packet, (VOID *)DEFAULT_MESSAGE, sizeof(DEFAULT_MESSAGE), &NxAppPool, TX_WAIT_FOREVER);
     if (ret != NX_SUCCESS)
     {
-      Error_Handler();
+        Error_Handler();
     }
 
       /* send the message */
@@ -418,6 +417,10 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
           } else if (data_buffer[index] != 'x') {
             status = 2;pattern = 0x0000;
             printf("[ST%01d-UDP Receive]-> msg error at %d. character '%c'\r\n", STATION_ID,index,data_buffer[index]);
+
+            // Log
+            snprintf(logmsg, sizeof(logmsg), "[Portal-->ST%01d] msg error at %d. character '%c'",STATION_ID,index,data_buffer[index]);
+            SENDLOG();
             break;                // error case captured
           }
       }
@@ -429,6 +432,10 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
           // valid pattern received
           printf("[ST%01d-UDP Receive]-> pattern:0x%04X\r\n", STATION_ID,pattern);
           Station_SensorAck_Update(pattern);        //send pattern
+
+          // Log
+          snprintf(logmsg, sizeof(logmsg), "[Portal-->ST%01d] pattern:0x%04X",STATION_ID,pattern);
+          SENDLOG();
       }
 
 
@@ -522,7 +529,8 @@ VOID App_UDP_Thread_SendMESSAGE(const char *msg,unsigned char timestamp,unsigned
   /* send the message */
   ret = nx_udp_socket_send(&UDPSocket, data_packet, UDP_SERVER_ADDRESS, UDP_SERVER_PORT);
 
-  snprintf(logmsg, sizeof(message),message);
+  //snprintf(logmsg, sizeof(message),message);
+  snprintf(logmsg, sizeof(logmsg), "[ST%01d-->Portal] %s",STATION_ID,message);
   SENDLOG();
 
 //printf("\r[Portal] nx_udp_socket_send ret:%d\n",ret);
@@ -591,25 +599,20 @@ static VOID App_Link_Thread_Entry(ULONG thread_input)
 /* Send Transceiver Msg to Portal via UDP port */
 void App_UDP_Thread_Send_LOG(void)
 {
-#if 0  
   UINT ret;
   NX_PACKET *data_packet;
   CHAR message[70];
-  //CHAR * message;
 
     memset(message, 0, sizeof(message));
-
-    snprintf(message, sizeof(message), "PORT:%d ", UDP_SERVER_PORT);
-    strcpy(&message[10], logmsg);
+    strcpy(message, logmsg);
 
     ret = nx_packet_allocate(&NxAppPool, &data_packet, NX_UDP_PACKET, TX_WAIT_FOREVER);
 
     if (ret != NX_SUCCESS)
     {
-    Error_Handler();
+      Error_Handler();
     }
 
-    //ret = nx_packet_data_append(data_packet, (VOID *)"44,11,22,33", sizeof("44,11,22,33"), &NxAppPool, TX_WAIT_FOREVER);
     ret = nx_packet_data_append(data_packet, (VOID *)message, strlen(message), &NxAppPool, TX_WAIT_FOREVER);
 
     if (ret != NX_SUCCESS)
@@ -621,7 +624,6 @@ void App_UDP_Thread_Send_LOG(void)
     ret = nx_udp_socket_send(&UDPSocket, data_packet, PRINTF_SERVER_ADDRESS, PRINTF_PORT);
 
     nx_packet_release(data_packet);
-#endif
 }
 
 /* USER CODE END 1 */

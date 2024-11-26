@@ -88,12 +88,12 @@ extern void Error_Handler(void);
 #define Photocell_3_Pin GPIO_PIN_5
 #define Photocell_3_GPIO_Port GPIOF
 #define Photocell_3_EXTI_IRQn EXTI5_IRQn
+#define LINE2_LED_Pin GPIO_PIN_0
+#define LINE2_LED_GPIO_Port GPIOC
 #define LINE1_LED_Pin GPIO_PIN_3
 #define LINE1_LED_GPIO_Port GPIOC
 #define YELLOW_LEDS_Pin GPIO_PIN_0
 #define YELLOW_LEDS_GPIO_Port GPIOA
-#define LINE2_LED_Pin GPIO_PIN_3
-#define LINE2_LED_GPIO_Port GPIOA
 #define IR_RX_Pin GPIO_PIN_5
 #define IR_RX_GPIO_Port GPIOA
 #define LINE4_LED_Pin GPIO_PIN_0

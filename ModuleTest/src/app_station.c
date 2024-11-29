@@ -79,8 +79,6 @@ VOID Station_thread_entry(ULONG initial_param){
 
     printf("[Thread-Station] Entry\n\r");
     raceState = RACE_STATE_IDLE;
-    // initialize Sensors
-    Station_SetDefault();
 
     while (1)
     {
@@ -91,6 +89,9 @@ VOID Station_thread_entry(ULONG initial_param){
         {
             case RACE_STATE_IDLE:
             {
+                // initialize Sensors
+                Station_SetDefault();
+
                 tx_thread_resume(&thread_Led1);    
                 // turn off LEDs YELLOW-GREEN-REDs
                 HAL_GPIO_WritePin(YELLOW_LEDS_GPIO_Port,YELLOW_LEDS_Pin,GPIO_PIN_RESET);
@@ -101,7 +102,7 @@ VOID Station_thread_entry(ULONG initial_param){
                 if (tx_semaphore_get(&semaphore_buttonpress, TX_NO_WAIT) == TX_SUCCESS) {
                     // button pressed
                     printf("[BUTTON] pressed, RaceState-->READY\r\n"); 
-                    Station_SetDefault();
+                    //Station_SetDefault();
 
                     // Turn On YELLOW LED bars, check Sensor States
                     HAL_GPIO_WritePin(YELLOW_LEDS_GPIO_Port,YELLOW_LEDS_Pin,GPIO_PIN_SET);
@@ -153,6 +154,8 @@ VOID Station_thread_entry(ULONG initial_param){
 VOID Station_SensorAck_Update(UINT ackmsg){
     
     UCHAR bitALL = 0;
+    UCHAR statSTARTMSG = ackmsg>>8;         // get start station status
+
     if (ackmsg == 0xFFFF){
         // all messages x x x x x x x x
         bitALL = 1;
@@ -181,12 +184,21 @@ VOID Station_SensorAck_Update(UINT ackmsg){
             if (PhotocellSensor[i].sendCount == 0) {
                 PhotocellSensor[i].isDetected = 0;
                 PhotocellSensor[i].isPinIDLE = 0;
+                PhotocellSensor[i].isMsgAck = 0;
             }
         }
-        else if (ackmsg & (1 << (3 - i))) 
+        else  
         {
-            PhotocellSensor[i].sendCount = 0;
-            PhotocellSensor[i].isDetected = 0;        
+            if (ackmsg & (1 << (3 - i))) {
+                PhotocellSensor[i].sendCount = 0;
+                PhotocellSensor[i].isDetected = 0;
+            }
+            // set ACK flag in case of "s" received 
+            if (statSTARTMSG & (1 << (3 - i))) {
+                PhotocellSensor[i].isMsgAck = 1;
+            }
+            else
+                PhotocellSensor[i].isMsgAck = 0;
         }
     }
 } 
@@ -205,14 +217,34 @@ static void Station_SensorHandler(void) {
             PhotocellSensor[i].bounce = 0;
             PhotocellSensor[i].timestamp = tx_time_get();
             PhotocellSensor[i].sendCount = REPS_TXMESSAGE;
-
-            // Turn On LED of Line
-            HAL_GPIO_WritePin((GPIO_TypeDef *)LED_GPIOs[i],LED_PINs[i],GPIO_PIN_SET);
+           
 
 #if STATION_MODE == START_STATION 
+            // Turn On LED of Line
+            HAL_GPIO_WritePin((GPIO_TypeDef *)LED_GPIOs[i],LED_PINs[i],GPIO_PIN_SET);
             App_UDP_Thread_SendMESSAGE(START_MESSAGE,1,i);
+            // LOG
+            snprintf(logmsg, sizeof(logmsg), "[ST%01d-UDP Send] -> photocell sensor detected!",STATION_ID);
+            SENDLOG();
 #elif STATION_MODE == FINISH_STATION
-            App_UDP_Thread_SendMESSAGE(FINISH_MESSAGE,1,i+4);
+
+            if (PhotocellSensor[i].isMsgAck) {
+                // Turn On LED of Line
+                HAL_GPIO_WritePin((GPIO_TypeDef *)LED_GPIOs[i],LED_PINs[i],GPIO_PIN_SET);
+                App_UDP_Thread_SendMESSAGE(FINISH_MESSAGE,1,i+4);    
+                // LOG
+                snprintf(logmsg, sizeof(logmsg), "[ST%01d-UDP Send] -> photocell sensor detected!",STATION_ID);
+                SENDLOG();
+            }
+            else {
+                 // set default
+                Station_SetDefault();
+                printf("[ST%01d-UDP Send] -> race start NOT DETECTED at ST%01d station\r\n",STATION_ID,STATION_ID-4);   
+
+                // LOG
+                snprintf(logmsg, sizeof(logmsg), "[ST%01d-UDP Send] -> race start NOT DETECTED at ST%01d station",STATION_ID,STATION_ID-4);
+                SENDLOG();
+            }
 #endif
             --PhotocellSensor[i].sendCount;
         }

@@ -243,7 +243,7 @@ static void Station_SensorHandler(void) {
 
                 // LOG
                 snprintf(logmsg, sizeof(logmsg), "[ST%01d-UDP Send] -> race start NOT DETECTED at ST%01d station",STATION_ID,STATION_ID-4);
-                SENDLOG();
+                SENDLOG();return;
             }
 #endif
             --PhotocellSensor[i].sendCount;

@@ -137,6 +137,7 @@ VOID Station_thread_entry(ULONG initial_param){
             }
             case RACE_STATE_FINISH:
             {	
+                Station_SensorHandler();
                 break;
             }
         }
@@ -151,21 +152,28 @@ VOID Station_thread_entry(ULONG initial_param){
   *              --> 0000ssss 0000ffff checking
   * @retval None
   */
-VOID Station_SensorAck_Update(UINT ackmsg){
+VOID Station_SensorAck_Update(UINT ackmsg) {
     
     UCHAR bitALL = 0;
     UCHAR statSTARTMSG = ackmsg>>8;         // get start station status
 
-    if (ackmsg == 0xFFFF){
+    if (ackmsg == 0xFFFF) {
         // all messages x x x x x x x x
         bitALL = 1;
-        if (raceState == RACE_STATE_START && !Station_IsAnySensorTriggered()) {
-            printf("[PORTAL] , RaceState-->IDLE\r\n"); 
-            raceState = RACE_STATE_IDLE;
-            
-            // LOG
-            snprintf(logmsg, sizeof(logmsg), "[Portal-->ST%01d] new round->IDLE",STATION_ID);
-            SENDLOG();
+        if (!Station_IsAnySensorTriggered()) {
+#if STATION_MODE == START_STATION        
+            if (raceState == RACE_STATE_START)
+#elif STATION_MODE == FINISH_STATION
+            if (raceState == RACE_STATE_FINISH)
+#endif
+            {
+                printf("[PORTAL] , RaceState-->IDLE\r\n"); 
+                raceState = RACE_STATE_IDLE;
+                
+                // LOG
+                snprintf(logmsg, sizeof(logmsg), "[Portal-->ST%01d] new round->IDLE",STATION_ID);
+                SENDLOG();
+            }
         }
 
     }
@@ -224,7 +232,7 @@ static void Station_SensorHandler(void) {
             HAL_GPIO_WritePin((GPIO_TypeDef *)LED_GPIOs[i],LED_PINs[i],GPIO_PIN_SET);
             App_UDP_Thread_SendMESSAGE(START_MESSAGE,1,i);
             // LOG
-            snprintf(logmsg, sizeof(logmsg), "[ST%01d-UDP Send] -> photocell sensor detected!",STATION_ID);
+            snprintf(logmsg, sizeof(logmsg), "[ST%01d-UDP Send] -> <START photocell %01d> detected!",STATION_ID,i);
             SENDLOG();
 #elif STATION_MODE == FINISH_STATION
 
@@ -233,16 +241,18 @@ static void Station_SensorHandler(void) {
                 HAL_GPIO_WritePin((GPIO_TypeDef *)LED_GPIOs[i],LED_PINs[i],GPIO_PIN_SET);
                 App_UDP_Thread_SendMESSAGE(FINISH_MESSAGE,1,i+4);    
                 // LOG
-                snprintf(logmsg, sizeof(logmsg), "[ST%01d-UDP Send] -> photocell sensor detected!",STATION_ID);
+                snprintf(logmsg, sizeof(logmsg), "[ST%01d-UDP Send] -> <FINISH photocell %01d> detected!",STATION_ID,i+4);
                 SENDLOG();
+
+                raceState = RACE_STATE_FINISH;
             }
             else {
                  // set default
                 Station_SetDefault();
-                printf("[ST%01d-UDP Send] -> race start NOT DETECTED at ST%01d station\r\n",STATION_ID,STATION_ID-4);   
+                printf("[ST%01d-UDP Send] -> race start NOT DETECTED at LINE-%01d station\r\n",STATION_ID,i+4);   
 
                 // LOG
-                snprintf(logmsg, sizeof(logmsg), "[ST%01d-UDP Send] -> race start NOT DETECTED at ST%01d station",STATION_ID,STATION_ID-4);
+                snprintf(logmsg, sizeof(logmsg), "[ST%01d-UDP Send] -> race start NOT DETECTED at LINE-%01d station",STATION_ID,i+4);
                 SENDLOG();return;
             }
 #endif

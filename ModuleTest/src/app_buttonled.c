@@ -92,7 +92,7 @@ void app_buttonLed(void) {
     if (tx_semaphore_get(&semaphore_buttonpress, TX_NO_WAIT) == TX_SUCCESS)
     {
 
-      CHAR message[50] = "id1:s id2:s id3:x id4:s id5:f id6:x id7:G id8:f";
+      CHAR message[50] = "id1:s id2:s id3:x id4:x id5:x id6:x id7:x id8:x";
       UINT pattern = 0x0000;
       UCHAR status = 1;                     // resume that all "x"
       
@@ -117,7 +117,8 @@ void app_buttonLed(void) {
       }
       if (pattern != 0) {
           // valid pattern received
-          printf("[ST%01d-UDP Receive]-> pattern:0x%04X\r\n", 1,pattern);
+          snprintf(logmsg, sizeof(logmsg), "%s %s pattern:0x%04X",Module_Type[moduleType],RaceLine_State[raceState],pattern);
+          printf("%s\r\n",logmsg);
           Station_SensorAck_Update(pattern);        //send pattern
       }
 
@@ -155,6 +156,10 @@ VOID LED1_thread_entry(ULONG initial_param){
                 tx_thread_sleep(20);        
                 HAL_GPIO_TogglePin(USER_LED1_GPIO_Port,USER_LED1_Pin);
                 break;
+            }
+            default:
+            {
+                tx_thread_sleep(100);break;
             }
 
         }

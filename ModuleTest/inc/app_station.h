@@ -61,7 +61,14 @@ typedef enum _raceState{
     RACE_STATE_READY,
     RACE_STATE_START,
     RACE_STATE_FINISH,
+    RACE_STATE_MAX,
 }t_raceState;
+
+typedef enum _modulType{
+    MODULETYPE_START,
+    MODULETYPE_FINISH,
+    MODULETYPE_MAX,
+}t_modulType;
 
 typedef enum _sensorType{
     SENSOR_PHOTOCELL_1,
@@ -94,10 +101,14 @@ INTERFACE TX_SEMAPHORE semaphore_ledblink;
 INTERFACE TX_SEMAPHORE semaphore_buttonpress;
 INTERFACE TX_SEMAPHORE semaphore_photocell;
 
-INTERFACE char logmsg[50];
+INTERFACE char logmsg[75];
+
+INTERFACE const char * RaceLine_State[RACE_STATE_MAX];
+INTERFACE const char * Module_Type[MODULETYPE_MAX];
 
 INTERFACE volatile t_Sensor PhotocellSensor[SENSOR_COUNT_MAX];
 INTERFACE t_raceState raceState;
+INTERFACE t_modulType moduleType;
 INTERFACE const GPIO_TypeDef * Photocell_GPIOs[SENSOR_COUNT_MAX];
 INTERFACE const uint16_t Photocell_PINs[SENSOR_COUNT_MAX];
 

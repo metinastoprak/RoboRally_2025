@@ -396,7 +396,7 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
       /* retrieve the data sent by the server */
       nx_packet_data_retrieve(server_packet, data_buffer, &bytes_read);
 
-      printf("[ST%01d-UDP Receive]-> %s\r\n", STATION_ID,data_buffer);
+      printf("%s %s receive-> %s\r\n", Module_Type[moduleType],RaceLine_State[raceState],data_buffer);
 
       // check received message characters
       // message format ex: "id1:s id2:s id3:x id4:x id5:f id6:x id7:x id8:x"
@@ -416,10 +416,9 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
               status = 0;  
           } else if (data_buffer[index] != 'x') {
             status = 2;pattern = 0x0000;
-            printf("[ST%01d-UDP Receive]-> msg error at %d. character '%c'\r\n", STATION_ID,index,data_buffer[index]);
-
             // Log
-            snprintf(logmsg, sizeof(logmsg), "[Portal-->ST%01d] msg error at %d. character '%c'",STATION_ID,index,data_buffer[index]);
+            snprintf(logmsg, sizeof(logmsg), "%s %s msg error at %d. character '%c'",Module_Type[moduleType],RaceLine_State[raceState],index,data_buffer[index]);
+            printf("%s\r\n",logmsg);
             SENDLOG();
             break;                // error case captured
           }
@@ -430,14 +429,11 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
       }
       if (pattern != 0) {
           // valid pattern received
-          printf("[ST%01d-UDP Receive]-> pattern:0x%04X\r\n", STATION_ID,pattern);
-          Station_SensorAck_Update(pattern);        //send pattern
-
-          // Log
-          snprintf(logmsg, sizeof(logmsg), "[Portal-->ST%01d] pattern:0x%04X",STATION_ID,pattern);
+          snprintf(logmsg, sizeof(logmsg), "%s %s pattern:0x%04X",Module_Type[moduleType],RaceLine_State[raceState],pattern);
+          printf("%s\r\n",logmsg);
           SENDLOG();
+          Station_SensorAck_Update(pattern);        //send pattern
       }
-
 
 #if 0   
 	 // get "id:"  "cmd:" "stat:" sub msg
@@ -510,8 +506,6 @@ VOID App_UDP_Thread_SendMESSAGE(const char *msg,unsigned char timestamp,unsigned
   else {
     snprintf(message, sizeof(message), "id:%01d finish.%01d", sensorNum+1, timestamp); 
   }
-    // Message will be sent via UDP
-  printf("[ST%01d-UDP Send] -> %s\r\n",STATION_ID,message);
 
   //send message to portal
   ret = nx_packet_allocate(&NxAppPool, &data_packet, NX_UDP_PACKET, TX_WAIT_FOREVER);
@@ -530,7 +524,8 @@ VOID App_UDP_Thread_SendMESSAGE(const char *msg,unsigned char timestamp,unsigned
   ret = nx_udp_socket_send(&UDPSocket, data_packet, UDP_SERVER_ADDRESS, UDP_SERVER_PORT);
 
   //snprintf(logmsg, sizeof(message),message);
-  snprintf(logmsg, sizeof(logmsg), "[ST%01d-->Portal] %s",STATION_ID,message);
+  snprintf(logmsg, sizeof(logmsg), "%s %s %s",Module_Type[moduleType],RaceLine_State[raceState],message);
+  printf("%s\r\n",logmsg);
   SENDLOG();
 
 //printf("\r[Portal] nx_udp_socket_send ret:%d\n",ret);

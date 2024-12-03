@@ -34,16 +34,16 @@ int iar_fputc(int ch);
 * LOCAL TYPEDEFS 
 ********************************************************************************/
 
-const char * Generic_State[6] =    {"IDLE", \
-                                    "INIT", \
-                                    "HEAD_OK", \
-                                    "HEAD_FAIL", \
-                                    "ERROR", \
-                                    "DONE"};
+const char * RaceLine_State[RACE_STATE_MAX] =  {"<case.IDLE> ->", \
+                                                "<case.READY> ->", \
+                                                "<case.START> ->", \
+                                                "<case.FINISH> ->"};
 
+const char * Module_Type[MODULETYPE_MAX] =  {"[ModuleStart]","[ModuleFinish]"};
 
 volatile t_Sensor PhotocellSensor[SENSOR_COUNT_MAX];
 t_raceState raceState;
+t_modulType moduleType;
 
 const GPIO_TypeDef * Photocell_GPIOs[SENSOR_COUNT_MAX]={Photocell_1_GPIO_Port,Photocell_2_GPIO_Port,Photocell_3_GPIO_Port,Photocell_4_GPIO_Port}; 
 const uint16_t Photocell_PINs[SENSOR_COUNT_MAX]={Photocell_1_Pin,Photocell_2_Pin,Photocell_3_Pin,Photocell_4_Pin};
@@ -76,9 +76,11 @@ static uint8_t Station_IsAnySensorTriggered(void);
   */
 VOID Station_thread_entry(ULONG initial_param){
     
-
-    printf("[Thread-Station] Entry\n\r");
     raceState = RACE_STATE_IDLE;
+    
+    snprintf(logmsg, sizeof(logmsg), "%s %s thread started..",Module_Type[moduleType],RaceLine_State[raceState]);
+    printf("%s\r\n",logmsg);
+    SENDLOG();
 
     while (1)
     {
@@ -98,35 +100,41 @@ VOID Station_thread_entry(ULONG initial_param){
                 for(uint8_t i=0;i<SENSOR_COUNT_MAX;i++)
                     HAL_GPIO_WritePin((GPIO_TypeDef *)LED_GPIOs[i],LED_PINs[i],GPIO_PIN_RESET);
                 
-#if STATION_MODE == START_STATION    
+#if STATION_MODE == START_STATION
+                moduleType = MODULETYPE_START;    
                 if (tx_semaphore_get(&semaphore_buttonpress, TX_NO_WAIT) == TX_SUCCESS) {
                     // button pressed
-                    printf("[BUTTON] pressed, RaceState-->READY\r\n"); 
-                    //Station_SetDefault();
 
                     // Turn On YELLOW LED bars, check Sensor States
                     HAL_GPIO_WritePin(YELLOW_LEDS_GPIO_Port,YELLOW_LEDS_Pin,GPIO_PIN_SET);
 
-                    snprintf(logmsg, sizeof(logmsg), "[ST%01d-Station] button pressed->READY",STATION_ID);
+                    snprintf(logmsg, sizeof(logmsg), "%s %s Button pressed",Module_Type[moduleType],RaceLine_State[raceState]);
+                    printf("%s\r\n",logmsg);
                     SENDLOG();
                     raceState = RACE_STATE_READY;
+                    // case transition
+                    snprintf(logmsg, sizeof(logmsg), "%s %s mode entry",Module_Type[moduleType],RaceLine_State[raceState]);
+                    printf("%s\r\n",logmsg);
+                    SENDLOG();                   
                  }
 #elif STATION_MODE == FINISH_STATION
-                printf("RaceState-->START\r\n");
-
-                snprintf(logmsg, sizeof(logmsg), "[ST%01d-Station] RaceStat->START",STATION_ID);
-                SENDLOG();
+                moduleType = MODULETYPE_FINISH;
                 raceState = RACE_STATE_START;
-#endif
 
+                snprintf(logmsg, sizeof(logmsg), "%s %s mode entry",Module_Type[moduleType],RaceLine_State[raceState]);
+                printf("%s\r\n",logmsg);
+                SENDLOG();
+#endif
                 break;
             }
             case RACE_STATE_READY:
             {	
                 Station_SensorHandler();
                 if (Station_IsAnySensorTriggered()) {
-                    printf("RaceState-->START\r\n"); 
                     raceState = RACE_STATE_START;
+                    snprintf(logmsg, sizeof(logmsg), "%s %s mode entry",Module_Type[moduleType],RaceLine_State[raceState]);
+                    printf("%s\r\n",logmsg);
+                    SENDLOG();
                 }   
                 break;
             }
@@ -160,22 +168,21 @@ VOID Station_SensorAck_Update(UINT ackmsg) {
     if (ackmsg == 0xFFFF) {
         // all messages x x x x x x x x
         bitALL = 1;
-        if (!Station_IsAnySensorTriggered()) {
-#if STATION_MODE == START_STATION        
-            if (raceState == RACE_STATE_START)
+        if (!Station_IsAnySensorTriggered() && (raceState >= RACE_STATE_START)) {
+             
+#if STATION_MODE == START_STATION      
+            snprintf(logmsg, sizeof(logmsg), "%s %s new round->IDLE",Module_Type[moduleType],RaceLine_State[raceState]);
+            printf("%s\r\n",logmsg);
+            raceState = RACE_STATE_IDLE;
 #elif STATION_MODE == FINISH_STATION
-            if (raceState == RACE_STATE_FINISH)
-#endif
-            {
-                printf("[PORTAL] , RaceState-->IDLE\r\n"); 
+            if (raceState == RACE_STATE_FINISH) {
+                snprintf(logmsg, sizeof(logmsg), "%s %s new round->IDLE",Module_Type[moduleType],RaceLine_State[raceState]);
+                printf("%s\r\n",logmsg);
                 raceState = RACE_STATE_IDLE;
-                
-                // LOG
-                snprintf(logmsg, sizeof(logmsg), "[Portal-->ST%01d] new round->IDLE",STATION_ID);
-                SENDLOG();
             }
+#endif
+            SENDLOG();
         }
-
     }
     else {
 #if STATION_MODE == START_STATION    
@@ -220,19 +227,18 @@ static void Station_SensorHandler(void) {
     for (uint8_t i=0;i<SENSOR_COUNT_MAX;i++){
         if (PhotocellSensor[i].isDetected && !PhotocellSensor[i].isPinIDLE && (PhotocellSensor[i].sendCount == 0)) {
 
-            printf("\r\n[Station] Photocell-%d detected\r\n",i+1);
             PhotocellSensor[i].isPinIDLE = 1;
             PhotocellSensor[i].bounce = 0;
             PhotocellSensor[i].timestamp = tx_time_get();
             PhotocellSensor[i].sendCount = REPS_TXMESSAGE;
            
-
-#if STATION_MODE == START_STATION 
+#if STATION_MODE == START_STATION
             // Turn On LED of Line
             HAL_GPIO_WritePin((GPIO_TypeDef *)LED_GPIOs[i],LED_PINs[i],GPIO_PIN_SET);
             App_UDP_Thread_SendMESSAGE(START_MESSAGE,1,i);
             // LOG
-            snprintf(logmsg, sizeof(logmsg), "[ST%01d-UDP Send] -> <START photocell %01d> detected!",STATION_ID,i);
+            snprintf(logmsg, sizeof(logmsg), "%s %s <photocell #%01d> detected!",Module_Type[moduleType],RaceLine_State[raceState],i+1);
+            printf("%s\r\n",logmsg);
             SENDLOG();
 #elif STATION_MODE == FINISH_STATION
 
@@ -240,23 +246,25 @@ static void Station_SensorHandler(void) {
                 // Turn On LED of Line
                 HAL_GPIO_WritePin((GPIO_TypeDef *)LED_GPIOs[i],LED_PINs[i],GPIO_PIN_SET);
                 App_UDP_Thread_SendMESSAGE(FINISH_MESSAGE,1,i+4);    
+
                 // LOG
-                snprintf(logmsg, sizeof(logmsg), "[ST%01d-UDP Send] -> <FINISH photocell %01d> detected!",STATION_ID,i+4);
+                snprintf(logmsg, sizeof(logmsg), "%s %s <photocell #%01d> detected!",Module_Type[moduleType],RaceLine_State[raceState],i+5);
+                printf("%s\r\n",logmsg);
                 SENDLOG();
 
                 raceState = RACE_STATE_FINISH;
             }
             else {
                  // set default
-                Station_SetDefault();
-                printf("[ST%01d-UDP Send] -> race start NOT DETECTED at LINE-%01d station\r\n",STATION_ID,i+4);   
-
+                PhotocellSensor[i].isPinIDLE = 0;PhotocellSensor[i].isDetected = 0;PhotocellSensor[i].sendCount = 0;
                 // LOG
-                snprintf(logmsg, sizeof(logmsg), "[ST%01d-UDP Send] -> race start NOT DETECTED at LINE-%01d station",STATION_ID,i+4);
-                SENDLOG();return;
+                snprintf(logmsg, sizeof(logmsg), "%s %s start NOT Detected at LINE-%01d !!",Module_Type[moduleType],RaceLine_State[raceState],i+1);
+                printf("%s\r\n",logmsg);
+                SENDLOG();
             }
 #endif
-            --PhotocellSensor[i].sendCount;
+            if (PhotocellSensor[i].sendCount > 0)
+                --PhotocellSensor[i].sendCount;
         }
         else if (PhotocellSensor[i].isPinIDLE){
             // photocell detected, check "bounce" falling edge signal  of PIN level
@@ -280,7 +288,8 @@ static void Station_SensorHandler(void) {
 #if STATION_MODE == START_STATION    
             App_UDP_Thread_SendMESSAGE(START_MESSAGE,REPS_TXMESSAGE-PhotocellSensor[i].sendCount,i);     
 #elif STATION_MODE == FINISH_STATION
-            App_UDP_Thread_SendMESSAGE(FINISH_MESSAGE,REPS_TXMESSAGE-PhotocellSensor[i].sendCount,i+4);
+            if (PhotocellSensor[i].isMsgAck)        // "s" message should be confirmed
+                App_UDP_Thread_SendMESSAGE(FINISH_MESSAGE,REPS_TXMESSAGE-PhotocellSensor[i].sendCount,i+4);
 #endif
 
         }

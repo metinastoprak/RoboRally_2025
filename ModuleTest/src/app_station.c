@@ -64,6 +64,7 @@ VOID Portal_thread_entry(ULONG initial_param);
 static void Station_SensorHandler(void);
 static void Station_SetDefault(void);
 static uint8_t Station_IsAnySensorTriggered(void);
+static uint8_t Station_IsRaceStarted(void);
 
 /*******************************************************************************
 * FUNCTIONS
@@ -119,11 +120,17 @@ VOID Station_thread_entry(ULONG initial_param){
                  }
 #elif STATION_MODE == FINISH_STATION
                 moduleType = MODULETYPE_FINISH;
-                raceState = RACE_STATE_START;
+                if (Station_IsRaceStarted()){
 
-                snprintf(logmsg, sizeof(logmsg), "%s %s mode entry",Module_Type[moduleType],RaceLine_State[raceState]);
-                printf("%s\r\n",logmsg);
-                SENDLOG();
+                    snprintf(logmsg, sizeof(logmsg), "%s %s race started",Module_Type[moduleType],RaceLine_State[raceState]);
+                    printf("%s\r\n",logmsg);
+                    SENDLOG();
+                    raceState = RACE_STATE_START;
+                    // case transition
+                    snprintf(logmsg, sizeof(logmsg), "%s %s mode entry",Module_Type[moduleType],RaceLine_State[raceState]);
+                    printf("%s\r\n",logmsg);
+                    SENDLOG();                   
+                }
 #endif
                 break;
             }
@@ -322,6 +329,18 @@ static uint8_t Station_IsAnySensorTriggered(void){
             PhotocellSensor[SENSOR_PHOTOCELL_2].sendCount > 0 ||\
             PhotocellSensor[SENSOR_PHOTOCELL_3].sendCount > 0 ||\
             PhotocellSensor[SENSOR_PHOTOCELL_4].sendCount > 0) ? 1 : 0;
+}
+  /**
+  * @brief  Check any START -LINE whether race started or not?
+  * @param  None
+  * @retval None
+  */
+static uint8_t Station_IsRaceStarted(void){
+
+    return (PhotocellSensor[SENSOR_PHOTOCELL_1].isMsgAck == 1 ||\
+            PhotocellSensor[SENSOR_PHOTOCELL_2].isMsgAck == 1 ||\
+            PhotocellSensor[SENSOR_PHOTOCELL_3].isMsgAck == 1 ||\
+            PhotocellSensor[SENSOR_PHOTOCELL_4].isMsgAck == 1) ? 1 : 0;
 }
 /**
   * @brief  Retargets the C library printf function to the USART.

@@ -309,7 +309,16 @@ static VOID nx_app_thread_entry (ULONG thread_input)
   ret = nx_ip_address_get(&NetXDuoEthIpInstance, &IpAddress, &NetMask);
 
   /* print the IP address */
-  PRINT_IP_ADDRESS(IpAddress);
+  //PRINT_IP_ADDRESS(IpAddress);
+
+  snprintf(logmsg, sizeof(logmsg), "%s %s IP: %lu.%lu.%lu.%lu \r\n",Module_Type[moduleType],RaceLine_State[raceState], \
+          (IpAddress >> 24) & 0xff, \
+          (IpAddress >> 16) & 0xff, \
+          (IpAddress >> 8) & 0xff,  \
+          (IpAddress & 0xff));
+  printf("%s\r\n",logmsg);
+  SENDLOG();
+
 
   if (ret != TX_SUCCESS)
   {

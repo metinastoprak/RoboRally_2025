@@ -264,7 +264,7 @@ static void MX_ETH_Init(void)
 
   /* USER CODE END ETH_Init 1 */
   heth.Instance = ETH;
-  MACAddr[0] = 0x00;
+  MACAddr[0] = MAC_ADDRESS;
   MACAddr[1] = 0x80;
   MACAddr[2] = 0xE1;
   MACAddr[3] = 0x00;

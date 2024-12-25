@@ -82,14 +82,14 @@ UINT MX_NetXDuo_Init(VOID *memory_ptr);
 /* Private defines -----------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 typedef enum _macAddress{
-    MAC_ADDRESS_ID1=61,
-    MAC_ADDRESS_ID2,
-    MAC_ADDRESS_ID3,
-    MAC_ADDRESS_ID4,
-    MAC_ADDRESS_ID5,
-    MAC_ADDRESS_ID6,
-    MAC_ADDRESS_ID7,
-    MAC_ADDRESS_ID8,
+    MAC_ADDRESS_ID1=62,
+    MAC_ADDRESS_ID2=MAC_ADDRESS_ID1+2,
+    MAC_ADDRESS_ID3=MAC_ADDRESS_ID2+2,
+    MAC_ADDRESS_ID4=MAC_ADDRESS_ID3+2,
+    MAC_ADDRESS_ID5=MAC_ADDRESS_ID4+2,
+    MAC_ADDRESS_ID6=MAC_ADDRESS_ID5+2,
+    MAC_ADDRESS_ID7=MAC_ADDRESS_ID6+2,
+    MAC_ADDRESS_ID8=MAC_ADDRESS_ID7+2
 }t_macAdress;
 
 #define QUEUE_MAX_SIZE           512

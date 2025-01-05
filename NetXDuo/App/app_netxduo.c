@@ -46,8 +46,8 @@
 /* Private variables ---------------------------------------------------------*/
 TX_THREAD      NxAppThread;
 NX_PACKET_POOL NxAppPool;
-NX_IP          NetXDuoEthIpInstance;
 TX_SEMAPHORE   DHCPSemaphore;
+NX_IP          NetXDuoEthIpInstance;
 NX_DHCP        DHCPClient;
 /* USER CODE BEGIN PV */
 TX_THREAD AppUDPThread;
@@ -294,14 +294,22 @@ static VOID nx_app_thread_entry (ULONG thread_input)
   }
 
   /* wait until an IP address is ready */
-  if(tx_semaphore_get(&DHCPSemaphore, NX_APP_DEFAULT_TIMEOUT) != TX_SUCCESS)
-  {
-    /* USER CODE BEGIN DHCPSemaphore get error */
-    printf("[NETXAPP-THREAD] IP get error!...\r\n");
-    tx_thread_relinquish();
-    //Error_Handler();
-    return;
-    /* USER CODE END DHCPSemaphore get error */
+  UINT tryCount = 0;
+  while(1) {
+    if(tx_semaphore_get(&DHCPSemaphore, NX_APP_DEFAULT_TIMEOUT) != TX_SUCCESS)
+    {
+      printf("[NETXAPP-THREAD] try count for getIP #%d\r\n",tryCount);
+      if (++tryCount >= 10){
+      /* USER CODE BEGIN DHCPSemaphore get error */
+      printf("[NETXAPP-THREAD] IP get error!...\r\n");
+      tx_thread_relinquish();
+      //Error_Handler();
+      return;
+      /* USER CODE END DHCPSemaphore get error */
+      }
+    }
+    else  
+      break;
   }
 
   /* USER CODE BEGIN Nx_App_Thread_Entry 2 */
@@ -378,10 +386,19 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
     }
 
      //send connection active
-    TX_MEMSET(message, '\0', sizeof(message));
-    snprintf(message, sizeof(message), "id:%01d connection active", STATION_ID);
+//    TX_MEMSET(message, '\0', sizeof(message));
+//    snprintf(message, sizeof(message), "id:%01d connection active", STATION_ID);
+    TX_MEMSET(logmsg, '\0', sizeof(logmsg));
+    snprintf(logmsg, sizeof(logmsg), "%s IP: %lu.%lu.%lu.%lu \r\n",Module_Type[moduleType], \
+            (IpAddress >> 24) & 0xff, \
+            (IpAddress >> 16) & 0xff, \
+            (IpAddress >> 8) & 0xff,  \
+            (IpAddress & 0xff));
+    printf("%s\r\n",logmsg);
+    SENDLOG();
 
-    ret = nx_packet_data_append(data_packet, (VOID *)message, strlen(message), &NxAppPool, TX_WAIT_FOREVER);
+
+    ret = nx_packet_data_append(data_packet, (VOID *)logmsg, strlen(logmsg), &NxAppPool, TX_WAIT_FOREVER);
     //ret = nx_packet_data_append(data_packet, (VOID *)DEFAULT_MESSAGE, sizeof(DEFAULT_MESSAGE), &NxAppPool, TX_WAIT_FOREVER);
     if (ret != NX_SUCCESS)
     {

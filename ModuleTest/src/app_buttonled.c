@@ -50,11 +50,12 @@ void app_buttonLed(void) {
     static char bounceButton = 0;
 
     if (raceState != RACE_STATE_IDLE && HAL_GPIO_ReadPin(USER_BUTTON_GPIO_Port,USER_BUTTON_Pin)) {
+        tx_semaphore_get(&semaphore_buttonpress, TX_NO_WAIT);
         if (++bounceButton >= 50) {
             printf("[BUTTON LONG] pressed, RaceState-->IDLE\r\n");
             raceState = RACE_STATE_IDLE;
             bounceButton = 0;  
-            tx_semaphore_get(&semaphore_buttonpress, TX_NO_WAIT);      
+            //tx_semaphore_get(&semaphore_buttonpress, TX_NO_WAIT);      
         }
     }
     else {

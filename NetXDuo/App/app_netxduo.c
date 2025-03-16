@@ -294,22 +294,26 @@ static VOID nx_app_thread_entry (ULONG thread_input)
   }
 
   /* wait until an IP address is ready */
-  UINT tryCount = 0;
-  while(1) {
-    if(tx_semaphore_get(&DHCPSemaphore, NX_APP_DEFAULT_TIMEOUT) != TX_SUCCESS)
-    {
-      printf("[NETXAPP-THREAD] try count for getIP #%d\r\n",tryCount);
-      if (++tryCount >= 10){
-      /* USER CODE BEGIN DHCPSemaphore get error */
-      printf("[NETXAPP-THREAD] IP get error!...\r\n");
-      tx_thread_relinquish();
-      //Error_Handler();
-      return;
-      /* USER CODE END DHCPSemaphore get error */
-      }
-    }
-    else  
-      break;
+  if(tx_semaphore_get(&DHCPSemaphore, NX_APP_DEFAULT_TIMEOUT) != TX_SUCCESS)
+  {
+    /* USER CODE BEGIN DHCPSemaphore get error */
+    printf("[NETXAPP-THREAD] IP get error-->retry\r\n");
+
+    while (1) {
+        /* IP adresi almak için bekle */
+        if (tx_semaphore_get(&DHCPSemaphore, NX_APP_DEFAULT_TIMEOUT) == TX_SUCCESS)
+        {
+            /* get IP success */
+            break;
+        }
+        printf("[NETXAPP-THREAD] IP get error, retrying...\r\n");
+        tx_thread_sleep(NX_IP_PERIODIC_RATE);
+
+        /* re-start DHCP */
+        nx_dhcp_stop(&DHCPClient);
+        nx_dhcp_start(&DHCPClient);
+    }   
+    /* USER CODE END DHCPSemaphore get error */
   }
 
   /* USER CODE BEGIN Nx_App_Thread_Entry 2 */
@@ -352,7 +356,7 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
   UCHAR data_buffer[512];
 
   NX_PACKET *data_packet;
-  CHAR message[30];
+  //CHAR message[30];
 
   /* create the UDP socket */
   ret = nx_udp_socket_create(&NetXDuoEthIpInstance, &UDPSocket, "UDP Client Socket", NX_IP_NORMAL, NX_FRAGMENT_OKAY, NX_IP_TIME_TO_LIVE, QUEUE_MAX_SIZE);

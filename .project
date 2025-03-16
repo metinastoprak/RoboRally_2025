@@ -3,6 +3,7 @@
 	<name>RoboRally_2025</name>
 	<comment></comment>
 	<projects>
+		<project>RoboRally_2025</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

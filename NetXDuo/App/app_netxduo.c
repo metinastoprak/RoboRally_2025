@@ -64,7 +64,7 @@ static VOID ip_address_change_notify_callback(NX_IP *ip_instance, VOID *ptr);
 /* USER CODE BEGIN PFP */
 static VOID App_UDP_Thread_Entry(ULONG thread_input);
 static VOID App_Link_Thread_Entry(ULONG thread_input);
-
+static VOID Restart_UDP_Socket(void);
 /* USER CODE END PFP */
 
 /**
@@ -357,6 +357,8 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
 
   NX_PACKET *data_packet;
   //CHAR message[30];
+  UINT error_count = 0;
+  const UINT max_errors = 5;
 
   /* create the UDP socket */
   ret = nx_udp_socket_create(&NetXDuoEthIpInstance, &UDPSocket, "UDP Client Socket", NX_IP_NORMAL, NX_FRAGMENT_OKAY, NX_IP_TIME_TO_LIVE, QUEUE_MAX_SIZE);
@@ -382,40 +384,57 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
     TX_MEMSET(data_buffer, '\0', sizeof(data_buffer));
 
     /* create the packet to send over the UDP socket */
-    ret = nx_packet_allocate(&NxAppPool, &data_packet, NX_UDP_PACKET, TX_WAIT_FOREVER);
+    ret = nx_packet_allocate(&NxAppPool, &data_packet, NX_UDP_PACKET, TX_NO_WAIT);
 
     if (ret != NX_SUCCESS)
     {
-      Error_Handler();
+      printf("%s UDP Packet Allocation Error!\r\n",Module_Type[moduleType]);
+      tx_thread_sleep(10);            // wait a second then retry
+      continue;
     }
 
-     //send connection active
-//    TX_MEMSET(message, '\0', sizeof(message));
-//    snprintf(message, sizeof(message), "id:%01d connection active", STATION_ID);
+     //send board IP num to backend
     TX_MEMSET(logmsg, '\0', sizeof(logmsg));
     snprintf(logmsg, sizeof(logmsg), "%s IP: %lu.%lu.%lu.%lu \r\n",Module_Type[moduleType], \
             (IpAddress >> 24) & 0xff, \
             (IpAddress >> 16) & 0xff, \
             (IpAddress >> 8) & 0xff,  \
             (IpAddress & 0xff));
-    printf("%s\r\n",logmsg);
-    SENDLOG();
 
-
-    ret = nx_packet_data_append(data_packet, (VOID *)logmsg, strlen(logmsg), &NxAppPool, TX_WAIT_FOREVER);
-    //ret = nx_packet_data_append(data_packet, (VOID *)DEFAULT_MESSAGE, sizeof(DEFAULT_MESSAGE), &NxAppPool, TX_WAIT_FOREVER);
+    ret = nx_packet_data_append(data_packet, (VOID *)logmsg, strlen(logmsg), &NxAppPool, TX_NO_WAIT);
     if (ret != NX_SUCCESS)
     {
-        Error_Handler();
+      printf("%s UDP Packet Append Error!\r\n",Module_Type[moduleType]);
+      nx_packet_release(data_packet);
+      continue;
     }
 
-      /* send the message */
-      ret = nx_udp_socket_send(&UDPSocket, data_packet, UDP_SERVER_ADDRESS, UDP_SERVER_PORT);
+    /* send the message of "board IP" */
+    ret = nx_udp_socket_send(&UDPSocket, data_packet, UDP_SERVER_ADDRESS, UDP_SERVER_PORT);
+    if (ret == NX_SUCCESS){
+      printf("%s\r\n",logmsg);
+      SENDLOG();
+    }
+    else
+    {
 
+      printf("%s UDP Packet Send Error!\r\n",Module_Type[moduleType]);
+      nx_packet_release(data_packet);
+      error_count++;
+
+      if (error_count >= max_errors)
+      {
+          printf("%s Too many send errors, restarting UDP socket...\r\n",Module_Type[moduleType]);
+          Restart_UDP_Socket();
+          error_count = 0;
+      }
+      continue;      
+    }
+
+
+    UINT received_count = 0;
       /* MSG Listening .. wait 10 sec to receive response from the server */
-      ret = nx_udp_socket_receive(&UDPSocket, &server_packet, NX_APP_DEFAULT_TIMEOUT);
-
-    if (ret == NX_SUCCESS)
+    while (nx_udp_socket_receive(&UDPSocket, &server_packet, NX_APP_DEFAULT_TIMEOUT) == NX_SUCCESS)
     {
       ULONG source_ip_address;
       UINT source_port;
@@ -496,14 +515,19 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
 #endif
       /* release the server packet */
       nx_packet_release(server_packet);
-
-      /* toggle the green led on success */
-      //HAL_GPIO_TogglePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
+      
+      if (++received_count >= max_errors)
+        break;                              // exit loop to begin thread from start 
     }
-    else
+    if (!received_count)
     {
-      /* connection lost with the server, exit the loop */
-      //break;
+      error_count++;
+      if (error_count >= max_errors){
+          // UDP connection lost with the server
+          printf("%s UDP Receive timeout, restaring UDP socket\r\n", Module_Type[moduleType]);
+          Restart_UDP_Socket();
+          error_count = 0;
+      }
     }
 
   	//printf("\rUDP_Thread_Exit\n");
@@ -516,6 +540,16 @@ static VOID App_UDP_Thread_Entry(ULONG thread_input)
   nx_udp_socket_unbind(&UDPSocket);
   nx_udp_socket_delete(&UDPSocket);
 
+}
+/* ** Restart UDP Socket ** */
+static VOID Restart_UDP_Socket(void)
+{
+    nx_udp_socket_unbind(&UDPSocket);
+    nx_udp_socket_delete(&UDPSocket);
+    nx_udp_socket_create(&NetXDuoEthIpInstance, &UDPSocket, "UDP Client Socket",
+                         NX_IP_NORMAL, NX_FRAGMENT_OKAY, NX_IP_TIME_TO_LIVE, QUEUE_MAX_SIZE);
+    nx_udp_socket_bind(&UDPSocket, DEFAULT_PORT, TX_WAIT_FOREVER);
+    printf("%s UDP Socket Restarted!\n",Module_Type[moduleType]);
 }
 /* Send Transcevir Msg to Portal via UDP port */
 VOID App_UDP_Thread_SendMESSAGE(const char *msg,unsigned char timestamp,unsigned char sensorNum)

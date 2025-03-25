@@ -81,10 +81,6 @@ extern void Error_Handler(void);
 #define Photocell_1_EXTI_IRQn EXTI2_IRQn
 #define USER_LED2_Pin GPIO_PIN_3
 #define USER_LED2_GPIO_Port GPIOE
-#define INT2_LSM6D_Pin GPIO_PIN_3
-#define INT2_LSM6D_GPIO_Port GPIOF
-#define SA0_LSM6D_Pin GPIO_PIN_4
-#define SA0_LSM6D_GPIO_Port GPIOF
 #define Photocell_3_Pin GPIO_PIN_5
 #define Photocell_3_GPIO_Port GPIOF
 #define Photocell_3_EXTI_IRQn EXTI5_IRQn
@@ -107,9 +103,8 @@ extern void Error_Handler(void);
 #define TRIG1_GPIO_Port GPIOE
 #define USER_LED1_Pin GPIO_PIN_15
 #define USER_LED1_GPIO_Port GPIOB
-#define Photocell_2_Pin GPIO_PIN_13
-#define Photocell_2_GPIO_Port GPIOD
-#define Photocell_2_EXTI_IRQn EXTI13_IRQn
+#define Photocell_2_Pin GPIO_PIN_6
+#define Photocell_2_GPIO_Port GPIOG
 #define IR_TX_Pin GPIO_PIN_5
 #define IR_TX_GPIO_Port GPIOB
 #define USER_BUTTON_Pin GPIO_PIN_0

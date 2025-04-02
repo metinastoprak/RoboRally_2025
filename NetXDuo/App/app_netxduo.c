@@ -46,8 +46,8 @@
 /* Private variables ---------------------------------------------------------*/
 TX_THREAD      NxAppThread;
 NX_PACKET_POOL NxAppPool;
-TX_SEMAPHORE   DHCPSemaphore;
 NX_IP          NetXDuoEthIpInstance;
+TX_SEMAPHORE   DHCPSemaphore;
 NX_DHCP        DHCPClient;
 /* USER CODE BEGIN PV */
 TX_THREAD AppUDPThread;

@@ -148,6 +148,14 @@ VOID LED1_thread_entry(ULONG initial_param){
             }
             case RACE_STATE_READY:
             {
+
+/*
+                HAL_GPIO_TogglePin(LINE1_LED_GPIO_Port,LINE1_LED_Pin);
+                HAL_GPIO_TogglePin(LINE2_LED_GPIO_Port,LINE2_LED_Pin);
+                HAL_GPIO_TogglePin(LINE3_LED_GPIO_Port,LINE3_LED_Pin);
+                HAL_GPIO_TogglePin(LINE4_LED_GPIO_Port,LINE4_LED_Pin);
+                HAL_GPIO_TogglePin(YELLOW_LEDS_GPIO_Port,YELLOW_LEDS_Pin);
+*/
                 tx_thread_sleep(50);        
                 HAL_GPIO_TogglePin(USER_LED1_GPIO_Port,USER_LED1_Pin);
                 break;

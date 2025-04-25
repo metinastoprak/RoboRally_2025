@@ -86,11 +86,12 @@ void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin)
         }
       }while(counter < 1000);
       if (!bPinState){
-        PhotocellSensor[i].isDetected = 1;
+        PhotocellSensor[i].isCaptured = 1;
+        PhotocellSensor[i].bounceDetected = 0;
         //tx_semaphore_put(&semaphore_photocell);
       }
       else
-        PhotocellSensor[i].isDetected = 0;
+        PhotocellSensor[i].isCaptured = 0;
     }
   }
 }

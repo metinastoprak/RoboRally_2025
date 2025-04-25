@@ -66,6 +66,7 @@ static void Station_SetDefault(void);
 static uint8_t Station_IsAnySensorTriggered(void);
 static uint8_t Station_IsRaceStarted(void);
 
+static void Station_CheckPhotocellInputs(void);
 /*******************************************************************************
 * FUNCTIONS
 ********************************************************************************/
@@ -87,6 +88,7 @@ VOID Station_thread_entry(ULONG initial_param){
     {
         tx_thread_sleep(10);        //100ms sleep
         app_buttonLed();
+        Station_CheckPhotocellInputs();
 
         switch(raceState)
         {
@@ -309,12 +311,56 @@ static void Station_SensorHandler(void) {
   * @param  None
   * @retval None
   */
+ static void Station_CheckPhotocellInputs(void){
+ // 1ms aralıklarla pin OKU bounce_time=20ms
+    uint8_t bPinState;
+    uint8_t unBounce;
+
+    for (UCHAR i=0;i<SENSOR_COUNT_MAX;i++) {
+
+        if (PhotocellSensor[i].isCaptured) {
+            unBounce = 0;
+            ULONG initial_time = tx_time_get();
+            printf("StartTime:%ul \r\n",initial_time);
+            do {
+                App_Delay(1);
+                // read PIN
+                bPinState = HAL_GPIO_ReadPin(Photocell_GPIOs[i],Photocell_PINs[i]);
+                if (bPinState) {
+                    PhotocellSensor[i].bounceDetected = 0;
+                    if (++unBounce >= 5) {
+                        PhotocellSensor[i].isCaptured = 0;
+                        break;        
+                    }
+                }
+                else
+                {
+                    unBounce = 0;
+                }
+            }while (++PhotocellSensor[i].bounceDetected < 20);
+            printf("FinishTime:%ul \r\n",(tx_time_get() - initial_time));
+            if (PhotocellSensor[i].bounceDetected > 0){
+                PhotocellSensor[i].isDetected = 1;
+                PhotocellSensor[i].isCaptured = 0;
+            }
+
+        }
+    }
+
+ }
+/**
+  * @brief  Reset default state all stations
+  * @param  None
+  * @retval None
+  */
 static void Station_SetDefault(void){
 
     for (uint8_t i=0;i<SENSOR_COUNT_MAX;i++){
         PhotocellSensor[i].isPinIDLE = 0;
         PhotocellSensor[i].isDetected = 0;
+        PhotocellSensor[i].isCaptured = 0;
         PhotocellSensor[i].bounce = 0;
+        PhotocellSensor[i].bounceDetected = 0;
         PhotocellSensor[i].sendCount = 0;
     }
 }

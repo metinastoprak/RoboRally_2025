@@ -80,9 +80,12 @@ typedef enum _sensorType{
 
 typedef struct _Sensor {
     uint8_t isPinIDLE;
+    uint8_t isCaptured;
     uint8_t isDetected;
+
     uint8_t isMsgAck;
 
+    uint8_t bounceDetected;
 
     uint8_t bounce;
     uint8_t sendCount;

@@ -314,39 +314,33 @@ static void Station_SensorHandler(void) {
  static void Station_CheckPhotocellInputs(void){
  // 1ms aralıklarla pin OKU bounce_time=20ms
     uint8_t bPinState;
-    uint8_t unBounce;
 
     for (UCHAR i=0;i<SENSOR_COUNT_MAX;i++) {
 
         if (PhotocellSensor[i].isCaptured) {
-            unBounce = 0;
-            ULONG initial_time = tx_time_get();
-            printf("StartTime:%ul \r\n",initial_time);
-            do {
-                App_Delay(1);
-                // read PIN
+
+            if (!PhotocellSensor[i].bounceDetected) {
+                PhotocellSensor[i].bounceDetected = 1;
+                PhotocellSensor[i].timestamp = tx_time_get();
+                printf("StartTime:%lu \r\n",PhotocellSensor[i].timestamp);
+            }
+            else
+            {
                 bPinState = HAL_GPIO_ReadPin(Photocell_GPIOs[i],Photocell_PINs[i]);
-                if (bPinState) {
-                    PhotocellSensor[i].bounceDetected = 0;
-                    if (++unBounce >= 5) {
+                if (!bPinState) {
+                    if ( (tx_time_get() - PhotocellSensor[i].timestamp) >= 20 ) {
+                        printf("FinishTime:%lu \r\n",tx_time_get());
+                        PhotocellSensor[i].isDetected = 1;
                         PhotocellSensor[i].isCaptured = 0;
-                        break;        
                     }
                 }
                 else
                 {
-                    unBounce = 0;
+                    PhotocellSensor[i].isCaptured = 0;
                 }
-            }while (++PhotocellSensor[i].bounceDetected < 20);
-            printf("FinishTime:%ul \r\n",(tx_time_get() - initial_time));
-            if (PhotocellSensor[i].bounceDetected > 0){
-                PhotocellSensor[i].isDetected = 1;
-                PhotocellSensor[i].isCaptured = 0;
             }
-
         }
     }
-
  }
 /**
   * @brief  Reset default state all stations
